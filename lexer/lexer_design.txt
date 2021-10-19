@@ -1,0 +1,85 @@
+Lexical analyzer design
+
+-What does it do? 
+
+The lexer takes a set of characters from a file and forms a structure called "token".
+The structure contains the type of the token and its lexeme. 
+
+-How does it work ?
+
+Before using any functions of the lexer, the user must call the initialization function,
+which initializes standard search paths for header files, the lexer state etc.
+
+There are 5 main types of tokens:
+
+Identifier
+Keyword
+Constant 
+String-literal
+Punctuator
+
+Types of constants:
+-Integer
+-Floating Point
+-Character
+
+Keywords and Identifiers 
+
+Identifier and keywords consist of characters, digits and the underscore characters, but always start 
+with a character.
+
+How do we distinguish Keywords from Identifiers?
+
+
+How will symbol table be implemented ? 
+Reading ahead ? 
+Remove whitespaces ? 
+The interface for using the lexer ? 
+
+
+Reading Files
+
+The lexer will read the file to be lexed with C standard lib functions 
+and store data into a buffer. All dynamic memory allocation will be done with malloc.
+A data structure containing infos about the file will be malloce'd for each
+file that was opened.
+The structure will at least contain the file name, directory and number of bytes read.
+
+Recognition and Handling of punctuators 
+
+The full list of punctuators:
+>-<+/*%!&|^#.=[](){},;:~
+
+First 14 can continued with multiple characters, for example:
+
+>	>>	>>= >=
+
+
+
+--DONE--
+
+-Basic data structures
+-Basic initialization
+-Stack of header files
+
+--TODO
+-Lexer functions 
+-Directives handling
+-Define some macros for c_tok_type ??
+-Input bufferisation
+-Comment all the mess i've written...
+
+
+
+Thoughts 
+Symbol table - global and local.
+#include directive handling
+Keep track of new line chars
+
+
+Main structures:
+
+-Lexer state 
+
+-The file structure
+file name, directory, bytes read and buffer. The size of File?
