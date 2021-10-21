@@ -1,5 +1,5 @@
-
-
+char get_current();
+void move();
 
 enum c_tok_type
 {
@@ -65,8 +65,18 @@ enum c_tok_type
 struct c_token
 {
 	enum c_tok_type ttype;
-	char *lexeme;
-	float value;
+	void *attribute;
+
+	union c_token_t
+	{
+		//for the numbers
+		float value;
+
+		//ID's and Keywords
+		void *ht_pointer;
+
+		char *lexeme;
+	};
 	
 };
 

@@ -10,14 +10,6 @@ The structure contains the type of the token and its lexeme.
 Before using any functions of the lexer, the user must call the initialization function,
 which initializes standard search paths for header files, the lexer state etc.
 
-There are 5 main types of tokens:
-
-Identifier
-Keyword
-Constant 
-String-literal
-Punctuator
-
 Types of constants:
 -Integer
 -Floating Point
@@ -43,18 +35,27 @@ The lexer will read the file to be lexed with C standard lib functions
 and store data into a buffer. All dynamic memory allocation will be done with malloc.
 A data structure containing infos about the file will be malloce'd for each
 file that was opened.
-The structure will at least contain the file name, directory and number of bytes read.
 
 Recognition and Handling of punctuators 
 
 The full list of punctuators:
 >-<+/*%!&|^#.=[](){},;:~
 
-First 14 can continued with multiple characters, for example:
+First 14 can be continued with multiple characters, for example:
 
 >	>>	>>= >=
 
 
+Infos to be associated with identifier
+
+-First occurence
+-its lexeme
+-its type
+
+Infos to be associated with keywords
+
+-its type
+-its lexeme
 
 --DONE--
 
@@ -63,11 +64,12 @@ First 14 can continued with multiple characters, for example:
 -Stack of header files
 
 --TODO
--Lexer functions 
--Directives handling
--Define some macros for c_tok_type ??
 -Input bufferisation
--Comment all the mess i've written...
+-Symbol table
+-Directives handling
+-Additive info for identifiers
+-Define some macros for c_tok_type ??
+-Comment everything.
 
 
 
@@ -80,6 +82,8 @@ Keep track of new line chars
 Main structures:
 
 -Lexer state 
+
+-Token
 
 -The file structure
 file name, directory, bytes read and buffer. The size of File?
