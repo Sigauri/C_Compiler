@@ -1,9 +1,7 @@
-
+#include "lex_default.h"
+#include "stddef.h"
 // Amount of punctuators consisting of multiple chars (e.g. ">>" ">=" ">>=")
 #define MCHAR_PUNCT_QT 14
-
-// Page size
-#define PAGE_SIZE 4096
 
 #define BUFFER_PAIR_SIZE (PAGE_SIZE*2)
 
@@ -27,13 +25,45 @@
 #define BUFFER_END_FIRST (c_lstate.cur_file->buf + (PAGE_SIZE))
 #define BUFFER_END_SECOND (c_lstate.cur_file->buf + (BUFFER_PAIR_SIZE+1))
 
-#define DEFAULT_LEXEME_SIZE 128
+
+// Token's position
+struct pos_t
+{
+	// Offset into buffer
+	unsigned int buff_offset;
+
+	// Line number
+	unsigned int l_number;
+
+	// Offset from the start of the line
+	unsigned int l_offset;
+};
+
+
+// All the infos to be associated with id/kwd
+struct c_tok_name
+{
+	char *lexeme;
+	
+	union c_tok_name_union
+	{
+		struct c_tok_id
+		{
+			// Position where it first occured
+			struct pos_t *first_pos;
+			
+			//Type of ID
+			char *id_type;
+		};
+
+		// Keyword type
+		int kwd_type;
+	} tok_u;
+
+};
 
 struct c_lex_state
 {
-	//Atack of header files to lex
-	struct stack *header_files;
-
 	//A file to lex
 	struct c_file *cur_file;
 	
@@ -52,6 +82,46 @@ struct c_lex_state
 
 	char *lookahead;
 };
+
+
+enum c_kwd_type
+{
+	C_KWD_AUTO = 0,
+	C_KWD_BREAK,
+	C_KWD_CASE,
+	C_KWD_CHAR,
+	C_KWD_CONST,
+	C_KWD_CONTINUE,
+	C_KWD_DEFAULT,
+	C_KWD_DO,
+	C_KWD_DOUBLE,
+	C_KWD_ELSE,
+	C_KWD_ENUM,
+	C_KWD_EXTERN,
+	C_KWD_FLOAT,
+	C_KWD_FOR,
+	C_KWD_GOTO,
+	C_KWD_IF,
+	C_KWD_INLINE,
+	C_KWD_INT,
+	C_KWD_LONG,
+	C_KWD_REGISTER,
+	C_KWD_RESTRICT,
+	C_KWD_RETURN,
+	C_KWD_SHORT,
+	C_KWD_SIGNED,
+	C_KWD_SIZEOF,
+	C_KWD_STATIC,
+	C_KWD_STRUCT,
+	C_KWD_SWITCH,
+	C_KWD_TYPEDEF,
+	C_KWD_UNION,
+	C_KWD_UNSIGNED,
+	C_KWD_VOID,
+	C_KWD_VOLATILE, 
+	C_KWD_WHILE
+};
+
 
 enum c_tok_type
 {
@@ -122,16 +192,14 @@ struct c_token
 {
 	enum c_tok_type ttype;
 
-	union c_token_t
-	{
-		//for the numbers
-		float value;
-
-		//ID's and Keywords
-		void *ht_pointer;
-	};
+	float value;
 	
 };
 
 struct c_token *get_next_token();
 void lstate_init(char *fname);
+
+//if id - kwd-type has to be -1, if a keyword - id_type and t_pos has to be NULL
+struct c_tok_name *c_tok_name_create(char *lexeme, struct pos_t *t_pos, 
+							char *id_type, int kwd_type);
+

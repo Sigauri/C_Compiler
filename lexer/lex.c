@@ -1,10 +1,8 @@
-
-
 //////////////////////////////////
 //								//
 //		LEXICAL ANALYZER		//
 //								//
-//		Author: Big_Jo			//
+//		 Author: Big_Jo			//
 //								//
 //////////////////////////////////								
 
@@ -12,8 +10,8 @@
 #include "lex.h"
 #include "string.h"
 #include "stdlib.h"
-#include "stack.h"
 #include "ctype.h"
+#include "lex_default.h"
 
 static struct c_file
 {
@@ -31,9 +29,9 @@ static struct c_file
 struct c_lex_state c_lstate;
 
 /*
-	Moves lookahead character forward by x positions
+	Moves lookahead forward by x positions
 	Handles EOF char if detected
-	Forms a lexeme so we have it at the end of get_next_token
+	Writes x characters to c_lstate.lex_cur
 */
 #define MOVE_LOOKAHEAD(x)		 																\
 	 																							\
@@ -87,10 +85,8 @@ struct c_lex_state c_lstate;
 		c_lstate.lookahead+=1;		\
 	}
 
-//Incorrectly when GET_LOOKAHEAD_ADDR is start/end of the buffer
-//Delete all and commit suicide
-#define GET_LOOKAHEAD 		((*c_lstate.lookahead))
 
+#define GET_LOOKAHEAD 		((*c_lstate.lookahead))
 #define GET_LOOKAHEAD_ADDR  (c_lstate.lookahead)
 
 //Set ch to the value of lookahead + offset
@@ -140,7 +136,7 @@ static inline int GET_NEXT_LOOKAHEAD(int offset)
 		strncpy(dest + copy_current, buff + buff_offset, copy_next); 							\
 	}
 
-//Clear(set to '\0') the string array containing current lexeme(c_lstate.lex_cur)
+//Clear(set to '\0') c_lstate.lex_base(current lexeme)
 #define RS_LEX()																				\
 	c_lstate.lex_cur = c_lstate.lex_base;														\
 	memset(c_lstate.lex_base, '\0', c_lstate.lex_size);											
@@ -150,12 +146,34 @@ static struct c_file init_file(struct c_file *file, char *fname, char *dir);
 
 
 
+//if id - kwd_type has to be -1, if a keyword - id_type and t_pos has to be NULL
+struct c_tok_name *
+c_tok_name_create(char *lexeme, struct pos_t *t_pos, 
+					char *id_type, int kwd_type)
+{
+	struct c_tok_name *result = malloc(sizeof(struct c_tok_name));
+	result->lexeme = lexeme;
+	if(!id_type)
+	{
+		result->tok_u.kwd_type = kwd_type;
+	}
+	else if(kwd_type < 0)
+	{
+		result->tok_u.first_pos = t_pos;
+		result->tok_u.id_type = id_type;
+	}
+	else return NULL;
+
+	return result;
+}
+
 
 static struct c_file init_file(struct c_file *file, char *fname, char *dir)
 {
 	file->fname = fname;
 	file->dir = dir;
 	file->bytes_read = 0;
+	
 	// + 2 for 2 sentinels
 	file->buf = malloc(BUFFER_PAIR_SIZE + 2);
 	memset(file->buf, EOF, BUFFER_PAIR_SIZE + 2);
@@ -286,7 +304,6 @@ void lstate_init(char *fname)
 	fread(c_lstate.cur_file->buf, 1, PAGE_SIZE, c_lstate.cur_file->fp);
 	fread(c_lstate.cur_file->buf + (PAGE_SIZE+1), 1, PAGE_SIZE, c_lstate.cur_file->fp);
 
-	c_lstate.header_files = create_stack();
 	c_lstate.lookahead = c_lstate.cur_file->buf;
 
 
@@ -353,7 +370,7 @@ struct c_token *get_next_token()
 		int second_end_char = 0;
 
 		//If one-line comment, then first end char is '\n',
-		//If multiple-line first end char is '*' and second - '\'
+		//If multiple-line, first end char is '*' and second - '\'
 		if(GET_NEXT_LOOKAHEAD(1) == '/') first_end_char = '\n';
 		else if(GET_NEXT_LOOKAHEAD(1) == '*')
 		{
@@ -365,7 +382,7 @@ struct c_token *get_next_token()
 		MOVE_LOOKAHEAD(2);
 		do
 		{
-			//Move lookahead until first ene symbol met
+			//Move lookahead until first end symbol met
 			do
 			{
 
@@ -439,17 +456,13 @@ struct c_token *get_next_token()
 
 		ttype = C_TOK_IDENTIFIER;
 	}
-	//Handle a Directive
-	else if(GET_LOOKAHEAD == '#')
-	{
-		//Handle a directive 
-	}
 	//Handle a punctuator
 	else if(ispunct(GET_LOOKAHEAD))
 	{
 		int ch = GET_LOOKAHEAD;
 		int prev = 0;
 
+		//Handle string literals and character constants
 		if(ch == '"' || ch == '\'')
 		{
 
@@ -465,6 +478,7 @@ struct c_token *get_next_token()
 			if(prev == '"') ttype = C_TOK_STRING;
 			else if(prev == '\'') ttype = C_TOK_CHAR; 
 		}
+		//Handle punctuators/operators
 		else 
 		{
 			ch = GET_LOOKAHEAD;
@@ -477,6 +491,7 @@ struct c_token *get_next_token()
 			memset(str, '\0', 4);
 			BUF_CPY(str, GET_LOOKAHEAD_ADDR, 3);	
 
+			ttype = ht_punct_ttype[ch];
 			for(int i = 0; i < MCHAR_MAX_VARIATIONS; i++)
 			{
 				if(ht_mchar_punct[ch][i][0] == '\0') break;
@@ -489,11 +504,7 @@ struct c_token *get_next_token()
 				}
 
 			}
-
-			// If not a multiple char punctuator,
-			// take ttype for single char punctuators
-			if(ttype == C_TOK_UNKNOWN)
-				ttype = ht_punct_ttype[ch];
+				
 			
 		}
 

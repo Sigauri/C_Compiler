@@ -1,94 +1,141 @@
 Lexical analyzer design
 
--What does it do? 
+//////////////////////// What does it do? ////////////////////////
 
-The lexer takes a set of characters from a file and forms a structure called "token".
+The lexer takes a stream of characters from a file and forms a structure called "token".
 The structure contains the type of the token and its lexeme. 
 
--How does it work ?
+//////////////////////////////////////////////////////////////////
+
+
+//////////////////////// How does it work ? ////////////////////////
 
 Before using any functions of the lexer, the user must call the initialization function,
 which initializes standard search paths for header files, the lexer state etc.
-The user gets tokens by calling get_next_token().
+
+The user gets tokens by calling get_next_token(), which returns a pointer to c_token data structure.
 
 
-Types of constants:
--Integer
--Floating Point
--Character
+////////////////////////////////////////////////////////////////////
 
-Keywords and Identifiers 
+
+//////////////////////// Keywords and Identifiers //////////////////////
 
 Identifier and keywords consist of characters, digits and the underscore characters, but always start 
 with a character.
 
-How do we distinguish Keywords from Identifiers?
+////////////////////////////////////////////////////////////////////////
 
 
-
-
-
-Reading Files
+//////////////////////// Reading Files ////////////////////////
 
 The lexer will read the file to be lexed with C standard lib functions 
 and store data into a buffer. All dynamic memory allocation will be done with malloc.
 A data structure containing infos about the file will be malloce'd for each
 file that was opened.
 
-Recognition and Handling of punctuators 
+///////////////////////////////////////////////////////////////
+
+
+//////////////////////// Recognition and Handling of punctuators ////////////////////////
 
 The full list of punctuators:
 >-<+/*%!&|^#.=[](){},;:~
 
-First 14 can be continued with multiple characters, for example:
+First 14 characters can be continued with multiple characters, for example:
 
 >	>>	>>= >=
 
+/////////////////////////////////////////////////////////////////////////////////////////
 
-Infos to be associated with identifier
 
--First occurence
+//////////////////////// Symbol Table ////////////////////////
+
+We need symbol table to store some additive info
+for the IDs and Keywords, to check if the variables are declared etc. 
+The info is to be used by the parser, code generator etc. 
+
+The minimum info to be assosicated with ID/Keyword: 
+-first occurence
 -its lexeme
 -its type
 
-Infos to be associated with keywords
+How will token's position be present?
+It'll be a structure containing following fields:
+-Offset into buffer
+-Number of the line
+-Offset from the start of the line
 
--its type
--its lexeme
+-Basic design
+A new symbol table is created for each declaration scope.
+Every ST contains a "prev", which points to the ST 
+for the previous declaration scope. The very first ST is 
+for global names, it's "prev" field is always NULL.
 
---DONE--
 
+-Implementation
+Symbol table will be implemented as a hash table,
+where each element contains a pointer to data we need
+and a pointer to next element(Needed to handle collisions).
+If we make a lookup in a table and NULL is returned,
+it means this ID/kwd is not in a table.
+
+The hash table will be implmeneted as an array,
+with the default size of 16k bytes.
+
+Each element consists of pointer to data 
+and next element. 
+
+
+-Some basic stuff to implement
+
+-HASH TABLE
+
+get_hash(str) - Get hash code for str
+ht_create() 		- Create a hash table
+ht_destroy()		- Remove a hash table and free storage
+ht_insert(id, node) - Insert node at ht[id]
+ht_remove(id)		- Remove node at ht[id]
+ht_get(id)			- Get node at ht[id]
+
+-SYMBOL TABLE
+st_create() - create symbol table
+st_destroy(st) - remove symbol table st, free all the memory allocated
+
+st_add(st, entry) 	- add an entry to the symbol table st
+st_get(st, value)	- get an entry from st 
+st_remove(st, value) - remove an entry from the symbol table st
+
+/////////////////////////////////////////////////////////
+
+
+/// Main structures ///
+-Lexer state 
+-Token
+-The file structure
+
+
+/// DONE ///
+
+-Input Bufferisation
 -Basic data structures
 -Basic initialization
 -Stack of header files
 
---TODO
+/// TODO ///
 
--Handle comments
--Test input bufferisation
 -Symbol table
--Directives handling
--Additive info for identifiers
--Define some macros for c_tok_type ??
 -Comment everything.
 
 
 
-Thoughts
-Encoding 
-Symbol table - global and local.
-#include directive handling
-Keep track of new line chars
-Error handling? Warning messages? 
-The interface for using the lexer ? 
-Macros - FUCK YOU!!!
+/// Thoughts ///
+-Encoding
+-Symbol table - global and local.
+-#include directive handling
+-Keep track of new line chars
+-Error handling? Warning messages?
+-The interface for using the lexer ?
+-Macro definitions - FUCK YOU!!!
 
-
-Main structures:
-
--Lexer state 
-
--Token
-
--The file structure
 
