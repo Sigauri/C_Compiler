@@ -40,11 +40,15 @@ struct pos_t
 };
 
 
+// values for "type" field in c_tok_name
+#define C_UNION_ID 0
+#define C_UNION_KWD 1
+
 // All the infos to be associated with id/kwd
 struct c_tok_name
 {
 	char *lexeme;
-	
+	char type;	
 	union c_tok_name_union
 	{
 		struct c_tok_id
@@ -79,6 +83,9 @@ struct c_lex_state
 
 	// 1 if EOF reached, 0 otherwise
 	int eof_reached;
+
+	// size of c_tok_name in bytes
+	int c_tok_name_size;
 
 	char *lookahead;
 };
@@ -199,7 +206,11 @@ struct c_token
 struct c_token *get_next_token();
 void lstate_init(char *fname);
 
-//if id - kwd-type has to be -1, if a keyword - id_type and t_pos has to be NULL
-struct c_tok_name *c_tok_name_create(char *lexeme, struct pos_t *t_pos, 
-							char *id_type, int kwd_type);
+// Create and return an ID
+struct c_tok_name *
+c_tok_name_create_id(char *lexeme, struct pos_t *t_pos, 
+					char *id_type);
 
+// Create and return an KWD
+struct c_tok_name *
+c_tok_name_create_kwd(char *lexeme, int kwd_type);

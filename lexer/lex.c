@@ -145,28 +145,27 @@ static void buffer_reload();
 static struct c_file init_file(struct c_file *file, char *fname, char *dir);
 
 
-
-//if id - kwd_type has to be -1, if a keyword - id_type and t_pos has to be NULL
+// create and return id/kwd
 struct c_tok_name *
-c_tok_name_create(char *lexeme, struct pos_t *t_pos, 
-					char *id_type, int kwd_type)
+c_tok_name_create_id(char *lexeme, struct pos_t *t_pos, 
+					char *id_type)
 {
 	struct c_tok_name *result = malloc(sizeof(struct c_tok_name));
 	result->lexeme = lexeme;
-	if(!id_type)
-	{
-		result->tok_u.kwd_type = kwd_type;
-	}
-	else if(kwd_type < 0)
-	{
-		result->tok_u.first_pos = t_pos;
-		result->tok_u.id_type = id_type;
-	}
-	else return NULL;
-
+	result->type = C_UNION_ID;
+	result->tok_u.id_type = id_type;
+	result->tok_u.first_pos = t_pos;
 	return result;
 }
 
+struct c_tok_name *c_tok_name_create_kwd(char *lexeme, int kwd_type)
+{
+	struct c_tok_name *result = malloc(sizeof(struct c_tok_name));
+	result->tok_u.kwd_type = kwd_type;
+	result->lexeme = lexeme;
+	result->type = C_UNION_KWD;
+	return result;
+}
 
 static struct c_file init_file(struct c_file *file, char *fname, char *dir)
 {
@@ -291,6 +290,8 @@ void lstate_init(char *fname)
 
 	init_file(c_lstate.cur_file, file_name, dir);
 	
+	c_lstate.c_tok_name_size = sizeof(struct c_tok_name);
+
 	c_lstate.moved = 0;
 	c_lstate.eof_reached = 0;
 

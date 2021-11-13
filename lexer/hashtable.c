@@ -16,11 +16,6 @@ get_hash(unsigned char *str)
     return hash;
 }
 
-void ht_insert(struct hash_table *ht, unsigned int id, struct node *to_insert)
-{
-	to_insert->next = get_head(ht, id);
-	ht->ht_arr[id] = to_insert;
-}
 
 // Get node by key
 struct node *ht_get(struct hash_table *ht, char *key)
@@ -31,9 +26,22 @@ struct node *ht_get(struct hash_table *ht, char *key)
 
 	if(!cur) return NULL;
 	
-	while(strcmp(cur->data->lexeme, key) != 0) cur = cur->next;
-	
+	for(int i = 0; i < DEFAULT_HT_SIZE; i++)
+	{
+		if(strcmp(cur->data->lexeme, key) != 0)
+		{
+			cur = cur->next;
+			continue;
+		}
+		break;
+	}
 	return cur;
+}
+
+void ht_insert(struct hash_table *ht, unsigned int id, struct node *to_insert)
+{
+	to_insert->next = get_head(ht, id);
+	ht->ht_arr[id] = to_insert;
 }
 
 void ht_remove(struct hash_table *ht, unsigned int id, struct node *to_remove)
@@ -50,25 +58,37 @@ void ht_remove(struct hash_table *ht, unsigned int id, struct node *to_remove)
 struct hash_table *ht_create()
 {
 	struct hash_table *ht = calloc(1, sizeof(struct hash_table));
+	return ht;
 }
 
 
-// NOT DONE YET. To be fixed
+
+// Free all the memory allocated for the ht
 void ht_destroy(struct hash_table **ht)
 {
-	// Free all the memory allocated for ht entries
-	struct node *cur_header;
+	struct node *cur_head;
 	struct node *cur_node;
 	for(int i = 0; i < DEFAULT_HT_SIZE-1; i++)
 	{
-		cur_header = (*ht)->ht_arr[i];
-		if(cur_header)
+		cur_head = (*ht)->ht_arr[i];
+		if(cur_head)
 		{
-			cur_node = cur_header;
+			cur_node = cur_head;
 			while(cur_node)
 			{
 				struct node *cur_next = cur_node->next;
-				
+				struct c_tok_name *cur_name = cur_node->data;
+				// free(cur_name->lexeme);
+				switch(cur_name->type)
+				{
+					case C_UNION_ID:
+					{
+						free(cur_name->tok_u.first_pos);
+						free(cur_name->tok_u.id_type);
+						break;
+					}
+
+				}
 				free(cur_node);
 				cur_node = cur_next;
 			}

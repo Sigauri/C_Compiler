@@ -1,7 +1,7 @@
 
 #include "stdlib.h"	
 
-#define DEFAULT_HT_SIZE 16384
+#define DEFAULT_HT_SIZE 4098
 
 
 struct node

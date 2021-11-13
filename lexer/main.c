@@ -16,7 +16,7 @@ int main()
 	for(int i = 0; i < 6; i++)
 	{
 		nd[i] = malloc(node_size);
-		nd[i]->data = c_tok_name_create(keywords[i], NULL, NULL, C_KWD_CONTINUE);
+		nd[i]->data = c_tok_name_create_kwd(keywords[i], C_KWD_CONTINUE);
 		hash[i] = get_hash(keywords[i])%DEFAULT_HT_SIZE;
 	}
 
@@ -31,16 +31,10 @@ int main()
 
 	ht_remove(ht, 0, nd[3]);
 
-	printf("%s\n", get_head(ht, 0)->data->lexeme);
-	printf("%s\n", get_head(ht, 0)->next->data->lexeme);
-	printf("%s\n", get_head(ht, 0)->next->next->data->lexeme);
+	struct c_tok_name *t_name = c_tok_name_create_kwd("kwd", 3);
 
-	// for(int i = 0; i < DEFAULT_HT_SIZE; i++)
-	// {
-	// 	printf("%zu\n", i);
-	// 	printf("%zu\n", ht->ht_arr[i]);
-	// 	ht->ht_arr[i] = NULL;
-	// }
+
 	ht_destroy(&ht);
+
 
 }
