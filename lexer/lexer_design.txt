@@ -80,23 +80,28 @@ and a pointer to next element(Needed to handle collisions).
 If we make a lookup in a table and NULL is returned,
 it means this ID/kwd is not in a table.
 
-The hash table will be implmeneted as an array,
-with the default size of 16k bytes.
+The hash table is to be implemented as an array of
+linked lists. Each element in list consists 
+of pointer to data and next element.
+The hash table size is always a power of two. 
+Every time the load factor drops under 0.25
+or exceeds 0.75 the hash table will be resized.
 
-Each element consists of pointer to data 
-and next element. 
+Collision resolution method - Separate chaining.
 
 
--Some basic stuff to implement
+
+
+-Basic interface
 
 -HASH TABLE
 
-get_hash(str) - Get hash code for str
+get_hash(str) 		- Get hash code for str
 ht_create() 		- Create a hash table
 ht_destroy()		- Remove a hash table and free storage
 ht_insert(id, node) - Insert node at ht[id]
 ht_remove(id)		- Remove node at ht[id]
-ht_get(id)			- Get node at ht[id]
+ht_lookup(id)		- Get node at ht[id]
 
 -SYMBOL TABLE
 st_create() - create symbol table
@@ -136,6 +141,12 @@ st_remove(st, value) - remove an entry from the symbol table st
 -Keep track of new line chars
 -Error handling? Warning messages?
 -The interface for using the lexer ?
--Macro definitions - FUCK YOU!!!
+-Hash table.
+ How big should it be?
+ Expand when too many collisions?
+ Iterating through whole array when destroying ht?
+ Can't be used for any type of data and key.
+ 
+ 
 
 

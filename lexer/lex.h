@@ -1,5 +1,6 @@
 #include "lex_default.h"
 #include "stddef.h"
+
 // Amount of punctuators consisting of multiple chars (e.g. ">>" ">=" ">>=")
 #define MCHAR_PUNCT_QT 14
 

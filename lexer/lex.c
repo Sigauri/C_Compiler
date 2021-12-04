@@ -4,7 +4,7 @@
 //								//
 //		 Author: Big_Jo			//
 //								//
-//////////////////////////////////								
+//////////////////////////////////
 
 #include "stdio.h"
 #include "lex.h"
@@ -186,7 +186,6 @@ static struct c_file init_file(struct c_file *file, char *fname, char *dir)
 */
 static void buffer_reload()
 {	
-	// printf("%s\n", "buffer reload");
 	//A new value for lookahead
 	char *new_lookahead[2] = {c_lstate.cur_file->buf + PAGE_SIZE + 1, c_lstate.cur_file->buf};
 	

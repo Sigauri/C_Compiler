@@ -1,40 +1,76 @@
 #include "stdio.h"
 #include "string.h"
 #include "lex.h"
+
+#define DEBUG_INFO
+
 #include "hashtable.h"
+// #include "symboltable.h"
 #include "stdlib.h"
 
-
 int main()
-{
+{	
+	struct hash_table *ht = ht_create(0);
 
-	struct hash_table *ht = malloc(sizeof(struct hash_table));
+	struct c_tok_name *kwd[34];
 
-	struct node *nd[6];
-	unsigned int hash[6];
-	int node_size = sizeof(struct node);
-	for(int i = 0; i < 6; i++)
+	for(int i = 0; i < 34; i++)
 	{
-		nd[i] = malloc(node_size);
-		nd[i]->data = c_tok_name_create_kwd(keywords[i], C_KWD_CONTINUE);
-		hash[i] = get_hash(keywords[i])%DEFAULT_HT_SIZE;
+		kwd[i] = c_tok_name_create_kwd(keywords[i], i);
 	}
 
-	ht_insert(ht, 0, nd[0]);
-	ht_insert(ht, 0, nd[1]);
-	ht_insert(ht, 0, nd[2]);
-	ht_insert(ht, 0, nd[3]);
+	void *ptr1 = malloc(24);
+	void *ptr2 = malloc(24);
+	void *ptr3 = malloc(24);
+	void *ptr4 = malloc(24);
+	void *ptr5 = malloc(24);
+	void *ptr6 = malloc(24);
+	void *ptr7 = malloc(24);
+
+	*((size_t *)ptr1) = 12;	
+	*((size_t *)ptr2) = 11;	
+	*((size_t *)ptr3) = 13;	
+	char *l = "auto";
 	
-	printf("%s\n", get_head(ht, 0)->data->lexeme);
-	printf("%s\n", get_head(ht, 0)->next->data->lexeme);
-	printf("%s\n", get_head(ht, 0)->next->next->data->lexeme);
+	
+	printf("%zu\n", ht);
 
-	ht_remove(ht, 0, nd[3]);
+	for(int i = 0; i < 13; i++)
+	{
+		ht_insert(&ht, kwd[i], kwd[i]->lexeme, KEY_TYPE_STR);
+	}
 
-	struct c_tok_name *t_name = c_tok_name_create_kwd("kwd", 3);
+	float load_factor = (float)ht->in_use / ht->ht_size;
+	printf("%f\n", load_factor);
+	printf("%zu\n", ht->in_use);
+	printf("%zu\n", ht->collisions);
+	printf("%zu\n", ht->ht_size);
+	// printf("%s\n", (ht->ht_arr[ht->ht_hash_str(kwd[0]->lexeme) % ht->ht_size])->key);
 
+	// printf("%zu\n", ht->ht_size);
+	// ht_state_print((*ht));
 
-	ht_destroy(&ht);
+	// printf("%zu\n", ht->ht_arr[30]);
+	// printf("%zu\n", ht->ht_arr[30]->next);
+
+	// hash = ht->ht_hash("Key");
+	// printf("%zu\n", hash);
+
+	// hash = ht->ht_hash("Keys");
+	// printf("%zu\n", hash);
+
+	// hash = ht->ht_hash("Keyl");
+	// printf("%zu\n", hash);
+
+	// hash = ht->ht_hash("KeyH");
+	// printf("%zu\n", hash);
+
+	// hash = ht->ht_hash("KsdySx");
+	// printf("%zu\n", hash);
+
+	// hash = ht->ht_hash("SeySi");
+	// printf("%zu\n", hash);
+
 
 
 }
