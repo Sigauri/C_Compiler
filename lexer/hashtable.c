@@ -15,7 +15,7 @@ TODOs:
  a hash table can take too much time. Maybe create a list of all
  occupied entries?
 
--Passing double pointer to those functions? Right thing to do?
+-Passing double pointer to those functions??
 
 -Not sure about how good the hash functions are. Do some tests?  
 
@@ -102,25 +102,11 @@ int ht_copy(struct hash_table **ptr_ht_dest, struct hash_table **ptr_ht_src, int
 
 	for(int i = 0; i < ht_src->ht_size; i++)
 	{
+
 		to_copy = ht_src->ht_arr[i];
-		
 		while(to_copy)
 		{
-			// Check what type the key value is and compute hash value for it
-			switch(to_copy->key_type)
-			{
-				case KEY_TYPE_INT:
-				{
-					hash = ht_dest->ht_hash_int(*((long long *)to_copy->key));
-					break;
-				}
-				case KEY_TYPE_STR:
-				{
-					hash = ht_dest->ht_hash_str(to_copy->key);
-					break;
-				}
-			}
-
+			hash = to_copy->hash;
 			// Computing id to which the node goes 
 			unsigned int id = hash % ht_dest->ht_size;
 
@@ -144,13 +130,12 @@ int ht_copy(struct hash_table **ptr_ht_dest, struct hash_table **ptr_ht_src, int
 			if(ht_dest->ht_arr[id]) ht_dest->collisions++;
 			ht_dest->ht_arr[id] = to_insert;
 			to_copy = to_copy->next;
+			ht_dest->in_use++;
+
 		}
 
 	}
 
-
-
-	ht_dest->in_use = ht_src->in_use;
 	ht_dest->ht_hash_str = ht_src->ht_hash_str;
 	ht_dest->ht_hash_int = ht_src->ht_hash_int;
 
@@ -176,16 +161,17 @@ static struct hash_table *ht_resize(struct hash_table **ptr_ht, int option)
 
 
 	// Shifting(mul/div by 2) ht_size to left/right according to option
-	unsigned long ht_new_size = ht->ht_size <<= 1;
-	if(option) ht_new_size = ht->ht_size >>= 1;
-	
+	unsigned long ht_new_size = 0;
+	if(option) ht_new_size = ht->ht_size >> 1;
+	else ht_new_size = ht->ht_size << 1;
+
 	struct hash_table *new_ht = ht_create(ht_new_size);
 
 	ht_copy(&new_ht, ptr_ht, 1);
 	*ptr_ht = new_ht;
 
 
-	printf("%zu\n", *ptr_ht);
+	// printf("%zu\n", *ptr_ht);
 
 	return new_ht;
 
@@ -200,88 +186,122 @@ static void destroy_node(struct node *nd)
 
 
 static struct node *create_node(void *value, void *key, 
-				unsigned char key_type, struct node *next)
+						 unsigned long hash, struct node *next)
 {
 	struct node *new_node = calloc(1, node_size);
 	assert(new_node);
 
 	new_node->value = value;
 	new_node->key = key;
-	new_node->key_type = key_type;
 	new_node->next = next;
-
+	new_node->hash = hash;
 	return new_node;
 }
 
 
+
+
+
 // Insert value into ht
 // Resize ht if load factor is too high
-struct node *ht_insert(struct hash_table **ptr_ht, void *value, void *key, unsigned char key_type)
+struct node *ht_insert(struct hash_table **ptr_ht, void *value, void *key, unsigned long hash)
 {
-	unsigned long hash;
-	unsigned long id;
+	unsigned long id = hash % (*ptr_ht)->ht_size;;
 	struct node *to_insert;
-	struct hash_table *ht = *ptr_ht;
 	
-	if(!key || !value || !ht ) return NULL;
+	if(!key || !value || !(*ptr_ht) ) return NULL;
 
-	switch(key_type)
-	{
-		case KEY_TYPE_INT:
-		{
-			hash = ht->ht_hash_int(*((long long *)key));
-			break;
-		}
-		case KEY_TYPE_STR:
-		{
-			hash = ht->ht_hash_str(key);
-			break;
-		}
-		
-	}
-
-	id = hash % ht->ht_size;
-
-	if(ht->ht_arr[id]) ht->collisions++;
-	ht->ht_arr[id] = create_node(value, key, key_type, ht->ht_arr[id]);
+	if((*ptr_ht)->ht_arr[id]) (*ptr_ht)->collisions++;
+	(*ptr_ht)->ht_arr[id] = create_node(value, key, hash, (*ptr_ht)->ht_arr[id]);
 
 
 	// Check if load factor >= ht->max_load_factor
 	// and resize if needed.
-	float load_factor = (float)ht->in_use / ht->ht_size;
-	if(load_factor >= ht->max_load_factor) ht_resize(ptr_ht, 0);
+	float load_factor = (float)(*ptr_ht)->in_use / (*ptr_ht)->ht_size;
+	if(load_factor >= (*ptr_ht)->max_load_factor) ht_resize(ptr_ht, 0);
 
 	(*ptr_ht)->in_use++;
 	return (*ptr_ht)->ht_arr[id];
 }
 
 
-int ht_remove(struct hash_table **ht, void *key, unsigned char key_type)
+
+// Return an item whos key == key, NULL if not found
+void *ht_find(struct hash_table *ht, void *key, unsigned long hash)
 {
-	unsigned long hash;
-	unsigned long id;
+	unsigned long id = hash % ht->ht_size;
 
-	if(!(*ht) || !key) return 0;
+	if(!ht || !key) return NULL;
 
-	switch(key_type)
+	struct node *result = ht->ht_arr[id];
+
+	while(result && result->key != key)
+		result = result->next;
+
+	if(result)return result->value;
+	return NULL;
+}
+
+
+
+int ht_remove(struct hash_table **ht, void *value, unsigned long hash)
+{
+	unsigned long id = hash % (*ht)->ht_size;
+
+	if(!(*ht) || !value) return 0;
+	
+	struct node **to_compare = &((*ht)->ht_arr[id]);
+
+	while(to_compare && (*to_compare)->value != value)
+		*to_compare = (*to_compare)->next;
+
+	if(!(*to_compare)) return 0;
+
+	struct node *tmp = (*to_compare)->next;
+	free(*to_compare);
+	*to_compare = tmp;
+
+	float load_factor = (float)(*ht)->in_use / (*ht)->ht_size;
+	// printf("%f\n", load_factor);
+	if(load_factor <= (*ht)->min_load_factor)
 	{
-		case KEY_TYPE_STR:
-		{
-			hash = (*ht)->ht_hash_str(key);	
-			break;
-		}
-		case KEY_TYPE_INT:
-		{
+		// 1 because we want to reduce
+		ht_resize(ht, 1);
+		printf("%s\n", "reduced");
+	}	
 
-			break;
-		}
+	(*ht)->in_use--;
 
+	return 1;
+}
+
+
+/* 
+	Destroy a hash table
+	Frees storage allocated for HT
+	and all its nodes, but doesn't free keys
+	or values from those nodes, because other 
+	Hashtables may be still using them.
+
+*/
+void ht_destroy(struct hash_table **ht)
+{
+	if(!(*ht)) return;
+
+	struct node *current = (*ht)->ht_arr[0];
+
+	for(int i = 0; i < (*ht)->ht_size; i++)
+	{
+		struct node *to_remove = (*ht)->ht_arr[i];
+		while(to_remove)
+		{
+			struct node *tmp = to_remove->next;
+			free(to_remove);
+			to_remove = tmp;
+		}
 	}
 
-
-	id = hash % ht->ht_size;
-
-	struct node *to_compare = ht->ht_arr[id];
-
-
+	free((*ht)->ht_arr);
+	free(*ht);
+	*ht = NULL;
 }

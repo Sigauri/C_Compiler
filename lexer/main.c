@@ -10,7 +10,7 @@
 
 int main()
 {	
-	struct hash_table *ht = ht_create(0);
+	struct hash_table *ht = ht_create(32);
 
 	struct c_tok_name *kwd[34];
 
@@ -18,58 +18,34 @@ int main()
 	{
 		kwd[i] = c_tok_name_create_kwd(keywords[i], i);
 	}
-
-	void *ptr1 = malloc(24);
-	void *ptr2 = malloc(24);
-	void *ptr3 = malloc(24);
-	void *ptr4 = malloc(24);
-	void *ptr5 = malloc(24);
-	void *ptr6 = malloc(24);
-	void *ptr7 = malloc(24);
-
-	*((size_t *)ptr1) = 12;	
-	*((size_t *)ptr2) = 11;	
-	*((size_t *)ptr3) = 13;	
-	char *l = "auto";
 	
-	
-	printf("%zu\n", ht);
 
-	for(int i = 0; i < 13; i++)
+	unsigned long hash = 0;
+
+	for(int i = 0; i < 32; i++)
 	{
-		ht_insert(&ht, kwd[i], kwd[i]->lexeme, KEY_TYPE_STR);
+		ht_insert_str(&ht, kwd[i], kwd[i]->lexeme);
+	}	
+
+	for(int i = 0; i < 26; i++)
+	{
+		hash = ht->ht_hash_str(kwd[i]->lexeme);
+		ht_remove(&ht, ht_find(ht, kwd[i]->lexeme, hash), hash);
 	}
 
-	float load_factor = (float)ht->in_use / ht->ht_size;
-	printf("%f\n", load_factor);
-	printf("%zu\n", ht->in_use);
-	printf("%zu\n", ht->collisions);
-	printf("%zu\n", ht->ht_size);
-	// printf("%s\n", (ht->ht_arr[ht->ht_hash_str(kwd[0]->lexeme) % ht->ht_size])->key);
 
-	// printf("%zu\n", ht->ht_size);
-	// ht_state_print((*ht));
+	for(int i = 0; i < 32; i++)
+	{
+		printf("%zu\n", ht->ht_arr[i]);
+	}
 
-	// printf("%zu\n", ht->ht_arr[30]);
-	// printf("%zu\n", ht->ht_arr[30]->next);
 
-	// hash = ht->ht_hash("Key");
-	// printf("%zu\n", hash);
+	ht_state_print(ht);
 
-	// hash = ht->ht_hash("Keys");
-	// printf("%zu\n", hash);
+	// Destroys hashtable and sets ht to NULL
+	ht_destroy(&ht);
+	printf("%zu\n", ht);
 
-	// hash = ht->ht_hash("Keyl");
-	// printf("%zu\n", hash);
-
-	// hash = ht->ht_hash("KeyH");
-	// printf("%zu\n", hash);
-
-	// hash = ht->ht_hash("KsdySx");
-	// printf("%zu\n", hash);
-
-	// hash = ht->ht_hash("SeySi");
-	// printf("%zu\n", hash);
 
 
 

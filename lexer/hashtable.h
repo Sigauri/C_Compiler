@@ -14,9 +14,8 @@ struct node
 {
 	void *value;
 	
-	// The pointer to the key value itself and its type
 	void *key;
-	unsigned char key_type;
+	unsigned long hash;
 
 	struct node *next;
 };
@@ -50,26 +49,40 @@ struct hash_table
 
 // The interface
 
+
+#define ht_insert_int(ht, value, key)					\
+	do 													\
+	{													\
+		unsigned long hash = (*ht)->ht_hash_int(key);		\
+		ht_insert(ht, value, key, hash);				\
+	} while (0);
+
+#define ht_insert_str(ht, value, key)					\
+	do 													\
+	{													\
+		unsigned long hash = (*ht)->ht_hash_str(key);		\
+		ht_insert(ht, value, key, hash);				\
+	} while (0);
+
+
 // Creates a hashtable
 struct hash_table *ht_create(unsigned int ht_size);
 
 // Destroy hashtable
-void ht_destroy(struct hash_table *ht);
+void ht_destroy(struct hash_table **ht);
 
 
-// Not really sure if this has to be here
+// Not really sure if this has to be here.
 // Recompute the hash values, copy ht_dest to ht_src.
 // If rm is 1 - free ht_src
 int ht_copy(struct hash_table **ptr_ht_dest, struct hash_table **ptr_ht_src, int rm);
 
 // Insert value into ht (hash computed from key, hash function choosed from key_type)
-struct node *ht_insert(struct hash_table **ptr_ht, void *value, void *key, unsigned char key_type);
+struct node *ht_insert(struct hash_table **ptr_ht, void *value, void *key, unsigned long hash);
 
 // Remove a node with key value equal to key
-int ht_remove(struct hash_table *ht, void *key, unsigned char key_type);
-
-
-
+int ht_remove(struct hash_table **ht, void *value, unsigned long hash);
+void *ht_find(struct hash_table *ht, void *key, unsigned long hash);
 
 #ifdef DEBUG_INFO
 	#define ht_state_print(ht)										\
