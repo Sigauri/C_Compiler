@@ -12,6 +12,18 @@
 #include "stdlib.h"
 #include "ctype.h"
 #include "lex_default.h"
+#include "symboltable.h"
+
+
+
+/*
+
+TODOs:
+	Rewrite these HUGE macro definitions as functions
+	Clean up the mess with hashtables
+	Comment everything properly
+
+*/
 
 static struct c_file
 {
@@ -27,67 +39,69 @@ static struct c_file
 
 
 struct c_lex_state c_lstate;
+struct c_lex_state *saved_state;
 
 /*
 	Moves lookahead forward by x positions
 	Handles EOF char if detected
 	Writes x characters to c_lstate.lex_cur
 */
-#define MOVE_LOOKAHEAD(x)		 																\
-	 																							\
-	{																							\
-																								\
-		int move_current = x;																	\
-		int move_next = 0;																		\
-																								\
-		if(GET_LOOKAHEAD_ADDR + x > BUFFER_END_FIRST && 										\
-			GET_LOOKAHEAD_ADDR < BUFFER_END_FIRST)												\
-		{																						\
-			move_current = (GET_LOOKAHEAD_ADDR + x) - BUFFER_END_FIRST;							\
-			getchar();																			\
-		}																						\
-		else if(GET_LOOKAHEAD_ADDR + x > BUFFER_END_SECOND) 									\
-			move_current = BUFFER_END_SECOND - GET_LOOKAHEAD_ADDR;								\
-																								\
-																								\
-		move_next = x - move_current;															\
-																								\
-		strncpy(c_lstate.lex_cur, GET_LOOKAHEAD_ADDR, move_current);							\
-		c_lstate.lex_cur += move_current;														\
-		c_lstate.lookahead += move_current;														\
-								 																\
-		if(GET_LOOKAHEAD == EOF) 																\
-		{																						\
-			if(GET_LOOKAHEAD_ADDR == BUFFER_END_FIRST											\
-									||															\
-			GET_LOOKAHEAD_ADDR == BUFFER_END_SECOND)											\
-			{																					\
-				buffer_reload();																\
-																								\
-				strncpy(c_lstate.lex_cur, GET_LOOKAHEAD_ADDR, move_next);						\
-				c_lstate.lex_cur += move_next;													\
-				c_lstate.lookahead += move_next;												\
-			}																					\
-			else 																				\
-			{																					\
-				c_lstate.eof_reached = 1;														\
-				printf("%s\n", "EOF reached");													\
-				getchar();																		\
-			}																					\
-		}																						\
-																								\
-	}
-
-
-#define SKIP_WS()					\
-	while(isspace(GET_LOOKAHEAD))	\
-	{								\
-		c_lstate.lookahead+=1;		\
-	}
+// #define MOVE_LOOKAHEAD(x)		 																\
+// 	 																							\
+// 	{																							\
+// 																								\
+// 		int move_current = x;																	\
+// 		int move_next = 0;																		\
+// 																								\
+// 		if(GET_LOOKAHEAD_ADDR + x > BUFFER_END_FIRST && 										\
+// 			GET_LOOKAHEAD_ADDR < BUFFER_END_FIRST)												\
+// 		{																						\
+// 			move_current = (GET_LOOKAHEAD_ADDR + x) - BUFFER_END_FIRST;							\
+// 			getchar();																			\
+// 		}																						\
+// 		else if(GET_LOOKAHEAD_ADDR + x > BUFFER_END_SECOND) 									\
+// 			move_current = BUFFER_END_SECOND - GET_LOOKAHEAD_ADDR;								\
+// 																								\
+// 																								\
+// 		move_next = x - move_current;															\
+// 																								\
+// 		strncpy(c_lstate.lex_cur, GET_LOOKAHEAD_ADDR, move_current);							\
+// 		c_lstate.lex_cur += move_current;														\
+// 		c_lstate.lookahead += move_current;														\
+// 								 																\
+// 		if(GET_LOOKAHEAD == EOF) 																\
+// 		{																						\
+// 			if(GET_LOOKAHEAD_ADDR == BUFFER_END_FIRST											\
+// 									||															\
+// 			GET_LOOKAHEAD_ADDR == BUFFER_END_SECOND)											\
+// 			{																					\
+// 				buffer_reload();																\
+// 																								\
+// 				strncpy(c_lstate.lex_cur, GET_LOOKAHEAD_ADDR, move_next);						\
+// 				c_lstate.lex_cur += move_next;													\
+// 				c_lstate.lookahead += move_next;												\
+// 			}																					\
+// 			else 																				\
+// 			{																					\
+// 				c_lstate.eof_reached = 1;														\
+// 				printf("%s\n", "EOF reached");													\
+// 				getchar();																		\
+// 			}																					\
+// 		}																						\
+// 																								\
+// 	}
 
 
 #define GET_LOOKAHEAD 		((*c_lstate.lookahead))
 #define GET_LOOKAHEAD_ADDR  (c_lstate.lookahead)
+
+#define SKIP_WS()					\
+	while(isspace(GET_LOOKAHEAD))	\
+	{								\
+		if(GET_LOOKAHEAD == '\n')	\
+			c_lstate.line_num++;	\
+		c_lstate.lookahead+=1;		\
+	}
 
 //Set ch to the value of lookahead + offset
 //Check if we cross the buffer's boundary
@@ -107,11 +121,6 @@ static inline int GET_NEXT_LOOKAHEAD(int offset)
 		}
 		return ch;																						
 }
-
-
-
-
-
 
 //Copy to_copy bytes from src to dest, check if reach the end of the buffer
 #define BUF_CPY(dest, src, to_copy)																\
@@ -139,11 +148,62 @@ static inline int GET_NEXT_LOOKAHEAD(int offset)
 //Clear(set to '\0') c_lstate.lex_base(current lexeme)
 #define RS_LEX()																				\
 	c_lstate.lex_cur = c_lstate.lex_base;														\
-	memset(c_lstate.lex_base, '\0', c_lstate.lex_size);											
+	memset(c_lstate.lex_base, '\0', c_lstate.lex_size);		
+
+
+
+
+
+
+
+
+
 
 static void buffer_reload();
 static struct c_file init_file(struct c_file *file, char *fname, char *dir);
 
+void move_lookahead(unsigned int x)
+{
+																								
+		int move_current = x;																	
+		int move_next = 0;																		
+																								
+		if(GET_LOOKAHEAD_ADDR + x > BUFFER_END_FIRST && 										
+			GET_LOOKAHEAD_ADDR < BUFFER_END_FIRST)												
+		{																						
+			move_current = (GET_LOOKAHEAD_ADDR + x) - BUFFER_END_FIRST;							
+			getchar();																			
+		}																					
+		else if(GET_LOOKAHEAD_ADDR + x > BUFFER_END_SECOND) 								
+			move_current = BUFFER_END_SECOND - GET_LOOKAHEAD_ADDR;								
+																								
+																								
+		move_next = x - move_current;															
+																								
+		strncpy(c_lstate.lex_cur, GET_LOOKAHEAD_ADDR, move_current);							
+		c_lstate.lex_cur += move_current;														
+		c_lstate.lookahead += move_current;														
+								 																
+		if(GET_LOOKAHEAD == EOF) 																
+		{																						
+			if(GET_LOOKAHEAD_ADDR == BUFFER_END_FIRST											
+									||															
+			GET_LOOKAHEAD_ADDR == BUFFER_END_SECOND)											
+			{																					
+				buffer_reload();																
+																								
+				strncpy(c_lstate.lex_cur, GET_LOOKAHEAD_ADDR, move_next);						
+				c_lstate.lex_cur += move_next;													
+				c_lstate.lookahead += move_next;												
+			}																					
+			else 																				
+			{																					
+				c_lstate.eof_reached = 1;														
+				printf("%s\n", "EOF reached");													
+				getchar();																		
+			}																					
+		}																							
+}
 
 // create and return id/kwd
 struct c_tok_name *
@@ -152,7 +212,7 @@ c_tok_name_create_id(char *lexeme, struct pos_t *t_pos,
 {
 	struct c_tok_name *result = malloc(sizeof(struct c_tok_name));
 	result->lexeme = lexeme;
-	result->type = C_UNION_ID;
+	result->type = C_TOK_IDENTIFIER;
 	result->tok_u.id_type = id_type;
 	result->tok_u.first_pos = t_pos;
 	return result;
@@ -163,7 +223,7 @@ struct c_tok_name *c_tok_name_create_kwd(char *lexeme, int kwd_type)
 	struct c_tok_name *result = malloc(sizeof(struct c_tok_name));
 	result->tok_u.kwd_type = kwd_type;
 	result->lexeme = lexeme;
-	result->type = C_UNION_KWD;
+	result->type = C_TOK_KEYWORD;
 	return result;
 }
 
@@ -260,12 +320,46 @@ static unsigned char ht_mchar_ttype[MCHAR_PUNCT_MAX_CHAR + 1][MCHAR_MAX_VARIATIO
 // A hash table which contains types of one char punctuators
 static unsigned char ht_punct_ttype[PUNCT_MAX_CHAR];
 
+	#define ht_state_print(ht)										\
+	{																\
+		printf("\n\n%s%zu\n", "In Use: ", ht->in_use);				\
+		printf("%s%zu\n", "Collisions: ", ht->collisions);			\
+		printf("%s%zu\n", "HT Size: ", ht->ht_size);				\
+		printf("%s%zu\n", "ht_hash_str: ", ht->ht_hash_str);		\
+		printf("%s%zu\n\n", "ht_hash_int: ", ht->ht_hash_int);		\
+	}	
+
+struct c_lex_state store_state()
+{
+	saved_state = malloc(sizeof(struct c_lex_state));
+	saved_state->cur_file = malloc(sizeof(struct c_file));
+	saved_state->cur_file->buf = malloc(BUFFER_PAIR_SIZE + 2);
+	memcpy(saved_state->cur_file->buf, c_lstate.cur_file->buf, BUFFER_PAIR_SIZE + 2);
+	saved_state->eof_reached = c_lstate.eof_reached;
+	saved_state->moved = c_lstate.moved;
+	saved_state->lex_size = c_lstate.lex_size;
+	saved_state->c_tok_name_size = c_lstate.c_tok_name_size;
+	saved_state->line_num = c_lstate.line_num;
+	saved_state->lookahead = c_lstate.lookahead;
+
+}
+
+void reset_state()
+{
+	c_lstate.cur_file = saved_state->cur_file;
+	c_lstate.moved = saved_state->moved;
+	c_lstate.lex_size = saved_state->lex_size;
+	c_lstate.eof_reached = saved_state->eof_reached;
+	c_lstate.c_tok_name_size = saved_state->c_tok_name_size;
+	c_lstate.line_num = saved_state->line_num;
+	c_lstate.lookahead = saved_state->lookahead;
+}
 
 //Initialize lexer state
 void lstate_init(char *fname)
 {
 	c_lstate.cur_file = malloc(sizeof(struct c_file));
-	
+	c_lstate.line_num = 1;
 
 	int fname_length = strlen(fname);
 	char *dir;
@@ -349,8 +443,24 @@ void lstate_init(char *fname)
 		}
 			
 	}
+
+	struct symbol_table *prev = NULL;
+	st_create(c_lstate.global_st, prev, 64);
+	
+	for(int i = 0; i < NUMBER_KWD; i++)
+	{
+		struct c_tok_name *t_name = c_tok_name_create_kwd(keywords[i], i);
+		st_add(c_lstate.global_st, t_name, keywords[i]);
+	}
+
+	ht_state_print(c_lstate.global_st->ht);
 }
 
+/*
+
+*/
+
+//
 
 struct c_token *get_next_token()
 {
@@ -379,26 +489,25 @@ struct c_token *get_next_token()
 		}
 		else break;
 	
-		MOVE_LOOKAHEAD(2);
+		move_lookahead(2);
 		do
 		{
 			//Move lookahead until first end symbol met
 			do
 			{
 
-				MOVE_LOOKAHEAD(1);
+				move_lookahead(1);
 			}while(GET_LOOKAHEAD != first_end_char);
 
 			//If multiple string comment
 			if(second_end_char)
 			{
-				MOVE_LOOKAHEAD(1);
+				move_lookahead(1);
 				if(GET_LOOKAHEAD == second_end_char) continue;
 			}
 		}while(0);
 		
-		MOVE_LOOKAHEAD(1);
-		printf("%s\n", c_lstate.lex_base);
+		move_lookahead(1);	
 		
 		RS_LEX();
 		
@@ -417,13 +526,13 @@ struct c_token *get_next_token()
 		{	
 			if(GET_LOOKAHEAD == '.' && !is_float)
 			{
-				MOVE_LOOKAHEAD(1);
+				move_lookahead(1);
 				is_float = 1;
 				continue;
 			}
 			else if(GET_LOOKAHEAD > 47 && GET_LOOKAHEAD < 58)
 			{
-				MOVE_LOOKAHEAD(1);
+				move_lookahead(1);
 				continue;
 			}
 
@@ -444,17 +553,31 @@ struct c_token *get_next_token()
 	else if(isalpha(GET_LOOKAHEAD) || GET_LOOKAHEAD == '_')
 	{
 		
-		MOVE_LOOKAHEAD(1);
+		move_lookahead(1);
 		while(isalpha(GET_LOOKAHEAD) || GET_LOOKAHEAD == '_' || isdigit(GET_LOOKAHEAD))
 		{
-			MOVE_LOOKAHEAD(1);
+			move_lookahead(1);
 			
 		}
 
-		//look in a hash table
-
-
 		ttype = C_TOK_IDENTIFIER;
+		
+		/*  
+			We have to check if the current 
+			symbol table contains this id/kwd,
+			and if it does, get it and set the ttype.
+
+			If its not there, add it or not will be parser's task.
+		*/
+		struct c_tok_name *value = NULL;
+		st_find(c_lstate.global_st, value, c_lstate.lex_base);
+
+		// If we found an entry in a Symbol Table
+		if(value)
+		{	
+			ttype = value->type;
+		}
+
 	}
 	//Handle a punctuator
 	else if(ispunct(GET_LOOKAHEAD))
@@ -466,12 +589,12 @@ struct c_token *get_next_token()
 		if(ch == '"' || ch == '\'')
 		{
 
-			MOVE_LOOKAHEAD(1);
+			move_lookahead(1);
 
 			do
 			{
 				prev = GET_LOOKAHEAD;
-				MOVE_LOOKAHEAD(1);	
+				move_lookahead(1);	
 			}while(prev != ch);
 				
 
@@ -484,7 +607,7 @@ struct c_token *get_next_token()
 			ch = GET_LOOKAHEAD;
 
 			
-			MOVE_LOOKAHEAD(1);
+			move_lookahead(1);
 			
 
 			char str[4];
@@ -499,7 +622,7 @@ struct c_token *get_next_token()
 				if(strncmp(str, ht_mchar_punct[ch][i], strlen(ht_mchar_punct[ch][i])) == 0)
 				{
 					ttype = ht_mchar_ttype[ch][i];
-					MOVE_LOOKAHEAD(strlen(ht_mchar_punct[ch][i]));
+					move_lookahead(strlen(ht_mchar_punct[ch][i]));
 					break;
 				}
 
@@ -513,11 +636,11 @@ struct c_token *get_next_token()
 	else if(GET_LOOKAHEAD == EOF)
 	{
 		c_lstate.lookahead = c_lstate.lookahead - 1;
-		MOVE_LOOKAHEAD(1);
+		move_lookahead(1);
 	}
 	printf("%s\n", c_lstate.lex_base);
 	RS_LEX();
-	
+
 	result->ttype = ttype;
 	return result;
 }

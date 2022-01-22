@@ -66,11 +66,12 @@ It'll be a structure containing following fields:
 -Number of the line
 -Offset from the start of the line
 
--Basic design
+Basic design
+
 A new symbol table is created for each declaration scope.
 Every ST contains a "prev", which points to the ST 
 for the previous declaration scope. The very first ST is 
-for global names, it's "prev" field is always NULL.
+for global names, its "prev" field is always NULL.
 
 
 -Implementation
@@ -104,6 +105,19 @@ ht_remove(id)		- Remove node at ht[id]
 ht_lookup(id)		- Get node at ht[id]
 
 -SYMBOL TABLE
+
+Symbol table
+
+A new symbol table is created for each declaration scope.
+Every ST contains a "prev" field, which points to the ST 
+for the previous declaration scope. The very first ST is 
+for global names, its "prev" field is always NULL.
+
+If a lookup in the current ST failed, we look in prev
+STs. 
+
+Some basic stuff to implement
+
 st_create() - create symbol table
 st_destroy(st) - remove symbol table st, free all the memory allocated
 
@@ -145,7 +159,7 @@ st_remove(st, value) - remove an entry from the symbol table st
  How big should it be?
  Expand when too many collisions?
  Iterating through whole array when destroying ht?
- Can't be used for any type of data and key.
+ Can't be used for every type of data and key.
  
  
 

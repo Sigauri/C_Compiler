@@ -1,5 +1,5 @@
 #include "lex_default.h"
-
+#include "lex.h"
 char keywords[NUMBER_KWD][LEN_KWD] = 
 {
 	"auto",
@@ -37,3 +37,8 @@ char keywords[NUMBER_KWD][LEN_KWD] =
 	"volatile",
 	"while"
 };
+
+char continuations[MCHAR_PUNCT_QT][24] = {  
+											"> = >=\0", "- = >\0", "< = <= : %\0", "+ =\0", "=\0", "=\0", "= : :%:\0",
+											"=\0", "&\0", "| =\0", "=\0", "#\0", "..\0", "="
+										 };

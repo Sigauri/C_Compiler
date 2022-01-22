@@ -235,10 +235,10 @@ void *ht_find(struct hash_table *ht, void *key, unsigned long hash)
 
 	struct node *result = ht->ht_arr[id];
 
-	while(result && result->key != key)
+	while(result && strcmp(result->key, key) != 0)
 		result = result->next;
 
-	if(result)return result->value;
+	if(result) return result->value;
 	return NULL;
 }
 
@@ -267,7 +267,6 @@ int ht_remove(struct hash_table **ht, void *value, unsigned long hash)
 	{
 		// 1 because we want to reduce
 		ht_resize(ht, 1);
-		printf("%s\n", "reduced");
 	}	
 
 	(*ht)->in_use--;
@@ -281,7 +280,7 @@ int ht_remove(struct hash_table **ht, void *value, unsigned long hash)
 	Frees storage allocated for HT
 	and all its nodes, but doesn't free keys
 	or values from those nodes, because other 
-	Hashtables may be still using them.
+	Hashtables may still be using them.
 
 */
 void ht_destroy(struct hash_table **ht)

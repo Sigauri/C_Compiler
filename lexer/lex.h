@@ -41,15 +41,14 @@ struct pos_t
 };
 
 
-// values for "type" field in c_tok_name
-#define C_UNION_ID 0
-#define C_UNION_KWD 1
-
 // All the infos to be associated with id/kwd
 struct c_tok_name
 {
 	char *lexeme;
+
+	// The token type
 	char type;	
+
 	union c_tok_name_union
 	{
 		struct c_tok_id
@@ -75,6 +74,12 @@ struct c_lex_state
 	//How many times we used MOVE_LOOKAHEAD (remove later)
 	int moved;
 
+	// Hashtables with continuations for punctuators
+	struct hash_table *ht_punct_cont;
+
+	// Last token lexed(lookahead).
+	struct c_token *current;
+
 	//Default lexeme size
 	size_t lex_size;
 
@@ -82,11 +87,18 @@ struct c_lex_state
 	char *lex_base;
 	char *lex_cur;
 
+	// The global symbol table.
+	// All the default keywords and 
+	// global variables are stored here 
+	struct symbol_table *global_st;
+
 	// 1 if EOF reached, 0 otherwise
 	int eof_reached;
 
 	// size of c_tok_name in bytes
 	int c_tok_name_size;
+
+	int line_num;
 
 	char *lookahead;
 };
@@ -215,3 +227,6 @@ c_tok_name_create_id(char *lexeme, struct pos_t *t_pos,
 // Create and return an KWD
 struct c_tok_name *
 c_tok_name_create_kwd(char *lexeme, int kwd_type);
+
+void reset_state();
+struct c_lex_state store_state();
